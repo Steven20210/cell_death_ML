@@ -15,6 +15,7 @@ WIDTH = 800
 categories = ['dyingcell', 'healthycell']
 
 nucleus_array = []
+stim_thresh = {}
 # model = tf.keras.models.load_model('cell_cnn.h5')
 index = 0
 
@@ -135,14 +136,11 @@ class GUI(Frame):
         # img = itk.PhotoImage(file=file)
         # Label(self.train_win, image=img).grid()
 
-    def run_preprocessing(self, entry, win, thresh=32, stim='stim'):
+    def run_preprocessing(self, entry, win, stim='stim'):
         # exec(open('data_collection.py').read ())
         from data_collection import generate_training_data
 
-        if type(thresh) == str:
-            thresh = int(thresh)
-
-        generate_training_data(entry, threshold_value=thresh, stimuli=stim)
+        generate_training_data(entry, stimuli=stim, dictionary=stim_thresh)
 
         finish = Label(win, text="Preprocessing Complete", font=30)
         finish.place(anchor=NW)
@@ -152,23 +150,24 @@ class GUI(Frame):
         outputs_array_in = open('pi.array', 'rb')
         output_array = pickle.load(outputs_array_in)
 
-        output_array1 = []
+        std_arr = []
         imgs = []
 
-        for arr in output_array:
+        for img in output_array:
             # Converts the 0 into NaN so that the Std will not be influenced
-            arr = arr.astype('float')
+            arr = img.astype('float')
             arr[arr == 0] = None
             std_pi = np.nanstd(arr)
-            output_array1.append(std_pi)
-            imgs.append(arr)
+            std_arr.append(std_pi)
+            imgs.append(img)
 
-        q3, q1 = np.percentile(output_array1, [75, 25])
+
+        q3, q1 = np.percentile(std_arr, [75, 25])
         iqr = q3 - q1
-        h = 2 * iqr * (len(output_array1) ** (-1 / 3))
-        optimal_bins = int((np.amax(output_array1) - np.amin(output_array1)) / h)
+        h = 2 * iqr * (len(std_arr) ** (-1 / 3))
+        optimal_bins = int((np.amax(std_arr) - np.amin(std_arr)) / h)
 
-        return output_array1, optimal_bins
+        return std_arr, optimal_bins, imgs
 
     def get_entry(self, entry):
         self.run(index, entry)
@@ -216,10 +215,13 @@ class GUI(Frame):
         self.win_children(win)
 
         # Runs the preprocessing for the stimuli
-        self.run_preprocessing(dir, win, stim=stim)
+        # self.run_preprocessing(dir, win, stim=stim)
 
         # Places thresholding widgets onto the screen
         thresh = self.thresh_widgets(win, stim)
+
+        # Saves the thresh and stim for future preprocessing:
+        stim_thresh[stim] = thresh
 
         # self.run_preprocessing(dir, win, thresh=thresh, stim=stim)
 
@@ -227,19 +229,19 @@ class GUI(Frame):
         for factor in self.possible_hist:
             factor *= 1.5
             self.possible_hist[0] = factor
-        file_name_arr = self.make_hist(stim)
+        file_name_arr, std_arr, imgs = self.make_hist(stim)
         self.show_hist(file_name_arr)
 
     def decrease_hist(self, stim):
         for factor in self.possible_hist:
             factor *= 0.5
             self.possible_hist[0] = factor
-        file_name_arr = self.make_hist(stim)
+        file_name_arr, std_arr, imgs = self.make_hist(stim)
 
         self.show_hist(file_name_arr)
 
     def make_hist(self, stim):
-        output_array1, optimal_bins = self.pca()
+        std_arr, optimal_bins, imgs = self.pca()
         file_name_arr = []
         for i in range(len(self.possible_hist)):
             optimal_bins_fin = int(self.possible_hist[i] * optimal_bins)
@@ -248,11 +250,11 @@ class GUI(Frame):
                 stims=stim, fontsize=5))
             plt.xlabel(("PI Standard Deviation"))
             plt.ylabel("# of Images")
-            plt.hist(output_array1, bins=optimal_bins_fin, range=[0, 120])
+            plt.hist(std_arr, bins=optimal_bins_fin, range=[0, 120])
             file_name = "histogram " + "x.png"
             plt.savefig(file_name)
             file_name_arr.append(file_name)
-        return file_name_arr
+        return file_name_arr, std_arr, imgs
 
     def show_hist(self, file_name_arr):
         for file in file_name_arr:
@@ -267,8 +269,9 @@ class GUI(Frame):
 
     def thresh_widgets(self, win, stim):
 
-        file_name_arr = self.make_hist(stim)
+        file_name_arr, std_arr, imgs = self.make_hist(stim)
         self.show_hist(file_name_arr)
+
         increase_button = Button(win, text="Increase Bins", font=40,
                                  command=lambda: self.increase_hist(stim))
         decrease_button = Button(win, text="Decrease Bins", font=40,
@@ -284,6 +287,16 @@ class GUI(Frame):
         increase_button.place(rely=buttons_y, relx=0.67)
         decrease_button.place(rely=buttons_y, relx=0.05)
         back_button.place(rely=buttons_y, relx=0.9)
+
+        for img_index in range(len(std_arr)):
+            if std_arr[img_index] > 40:
+                plt.clf()
+                plt.imshow(imgs[img_index])
+                plt.show()
+            else:
+                plt.clf()
+                plt.imshow(imgs[img_index])
+                plt.show()
 
         return get_thresh.get()
 

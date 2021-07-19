@@ -122,7 +122,7 @@ def sort_stimulants(dictionary, stimuli):
 
     dic = {'blank': blank, 'staurosporin': staurosporin, 'h2o2': h2o2, 'nigericin': nigericin}
 
-    if stimuli == 'stim':
+    if stimuli == 'all':
         img_array = [blank, staurosporin, h2o2, nigericin]
     else:
         img_array = [dic[stimuli][:10]]
@@ -199,13 +199,13 @@ def store_arrays(possible_labels):
     #         org_arr[label_index - 1] = org_arr[label_index - 1][:num]
 
     # Verifying images
-    for stim in org_arr:
-        for index in range(0, len(stim), 5):
-            plt.imshow(stim[index][0][0])
-            plt.imshow(stim[index][0][1])
-            plt.imshow(stim[index][0][2])
-            plt.imshow(stim[index][0][3])
-            print(stim[index][1])
+    # for stim in org_arr:
+    #     for index in range(0, len(stim), 5):
+    #         plt.imshow(stim[index][0][0])
+    #         plt.imshow(stim[index][0][1])
+    #         plt.imshow(stim[index][0][2])
+    #         plt.imshow(stim[index][0][3])
+    #         print(stim[index][1])
 
     # Splitting the nuclei img and label into separate arrays
     for stim in org_arr:
@@ -321,6 +321,7 @@ def k_means_clustering(pi_k_means_array):
 
 
 def process_image(dapi, pi, index, labels, centroid_array, image_centroid_dictionary, threshold_value, stimuli):
+
     mean, std_dapi = cv2.meanStdDev(dapi)
     if std_dapi > 30:
         # plt.imshow(pi)
@@ -436,7 +437,7 @@ def process_image(dapi, pi, index, labels, centroid_array, image_centroid_dictio
         pass
 
 
-def generate_training_data(directory, threshold_value=38, stimuli='stim'):
+def generate_training_data(directory, stimuli='all', dictionary={"hello": 1}):
     pi_values, dapi_values, possible_labels = sort_files(directory, stimuli)
 
     for stim_index in range(len(dapi_values)):
@@ -447,6 +448,17 @@ def generate_training_data(directory, threshold_value=38, stimuli='stim'):
         labels = [possible_labels[mod_index - 2], possible_labels[mod_index - 1]]
         # for parent_img_index in range(len(dapi_values[stim_index])):
         # for parent_img_index in range(1):
+
+        # assigning threshold values
+        if stim_index == 0:
+            thresh = dictionary['blank']
+        elif stim_index == 1:
+            thresh = dictionary['staurosporin']
+        elif stim_index == 2:
+            thresh = dictionary['h2o2']
+        else:
+            thresh = dictionary['nigericin']
+
         for parent_img_index in range(len(dapi_values[stim_index])):
             # Stores the centroids of each image (without an ID):
             pi_frame_array = []
@@ -458,7 +470,7 @@ def generate_training_data(directory, threshold_value=38, stimuli='stim'):
                 dapi_img = cv2.imread(dapi_values[stim_index][parent_img_index][img_frame_index], -1)
                 pi_img = cv2.imread(pi_values[stim_index][parent_img_index][img_frame_index], -1)
                 process_image(dapi_img, pi_img, index, labels, centroid_array,
-                              image_centroid_dictionary, threshold_value, stimuli)
+                              image_centroid_dictionary, threshold, stimuli)
                 index += 1
 
     store_arrays(possible_labels)
@@ -478,5 +490,5 @@ def generate_training_data(directory, threshold_value=38, stimuli='stim'):
     print(label_array)
 
 
-# generate_training_data(r"C:\Users\Kerr Lab\Desktop\CD-ML-myNewBranch\60_x_frames", stimuli='stim')
+# generate_training_data(r"C:\Users\Kerr Lab\Desktop\CD-ML-myNewBranch\60_x_frames", stimuli='all')
 
