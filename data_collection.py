@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import collections
 from pandas import DataFrame
 import numpy as np
-from sklearn import preprocessing
+from sklearn.cluster import MiniBatchKMeans
 from PIL import Image, ImageEnhance, ImageStat
 
 sample_label_array = []
@@ -20,8 +20,13 @@ pi_array = []
 areas_array = []
 std_array = []
 
+pi_std_array = []
+# Calcein STD array
+c_std_array = []
+
 # Stores the centroids of each image:
 parent_image_centroid_dictionary = {}
+
 
 # Make sure to implement if the cells resemble a circle later
 
@@ -30,9 +35,11 @@ def sort_files(parent_folder, stimuli):
 
     dapi_files = []
     pi_files = []
+    c_files = []
 
     dapi_dictionary = {}
     pi_dictionary = {}
+    c_dictionary = {}
 
     first_folder = os.listdir(parent_folder)[0]
     image_directory = os.path.join(parent_folder, first_folder)
@@ -47,54 +54,67 @@ def sort_files(parent_folder, stimuli):
                 imgs_array.append(temp_file)
         file_array.append(imgs_array)
 
+    stimulus_index = -5
     for img_array in file_array:
         for img in img_array:
             try:
                 if img[-1] != 'D':
-                    if img[-5] == '1':
+                    if img[stimulus_index] == '1':
                         dapi_files.append(img_array)
-                    elif img[-5] == '3':
+                    elif img[stimulus_index] == '3':
                         pi_files.append(img_array)
+                    # elif img[stimulus_index] == '2':
+                    #     c_files.append(img_array)
             except:
                 continue
 
-    for img_array in dapi_files:
-        for img in img_array:
-            try:
-                if img[-9] == '1':
-                    dapi_dictionary[img[-13] + img[-12] + img[-11] + img[-9] + img[-8]] = img_array
-                else:
-                    dapi_dictionary[img[-13] + img[-12] + img[-11] + img[-8]] = img_array
-            except:
-                continue
-
-    for img_array in pi_files:
-        for img in img_array:
-            if img[-9] == '1':
-                pi_dictionary[img[-13] + img[-12] + img[-11] + img[-9] + img[-8]] = img_array
-            else:
-                pi_dictionary[img[-13] + img[-12] + img[-11] + img[-8]] = img_array
+    assign_key(dapi_files, dapi_dictionary)
+    assign_key(pi_files, pi_dictionary)
+    # assign_key(c_files, c_dictionary)
 
     for key in pi_dictionary:
         if key in dapi_dictionary:
             continue
         else:
             del pi_dictionary[key]
+            # del c_dictionary[key]
 
     for key in dapi_dictionary:
         if key in pi_dictionary:
             pass
         else:
             del dapi_dictionary[key]
+            # del c_dictionary[key]
+
+    # for key in c_dictionary:
+    #     if key in pi_dictionary and dapi_dictionary:
+    #         pass
+    #     else:
+    #         del dapi_dictionary[key]
+    #         del pi_dictionary[key]
 
     sorted_dapi = collections.OrderedDict(sorted(dapi_dictionary.items()))
     sorted_pi = collections.OrderedDict(sorted(pi_dictionary.items()))
-
+    # sorted_c = collections.OrderedDict(sorted(c_dictionary.items()))
 
     sorted_dapi, possible_label = sort_stimulants(sorted_dapi, stimuli)
     sorted_pi, possible_label_pi = sort_stimulants(sorted_pi, stimuli)
+    # sorted_c, possible_label_c = sort_stimulants(sorted_c, stimuli)
 
     return sorted_pi, sorted_dapi, possible_label
+
+
+def assign_key(stim_arr, stim_dic):
+    for img_array in stim_arr:
+        for img in img_array:
+            try:
+                if img[-9] == '1':
+                    stim_dic[img[-13] + img[-12] + img[-11] + img[-9] + img[-8]] = img_array
+                else:
+                    stim_dic[img[-13] + img[-12] + img[-11] + img[-8]] = img_array
+            except:
+                continue
+
 
 # Appends the images in groups of 3 (group by stimulants) because that's how they were organized
 def sort_stimulants(dictionary, stimuli):
@@ -125,7 +145,7 @@ def sort_stimulants(dictionary, stimuli):
     if stimuli == 'all':
         img_array = [blank, staurosporin, h2o2, nigericin]
     else:
-        img_array = [dic[stimuli][:10]]
+        img_array = [dic[stimuli][:10], staurosporin[:10]]
 
     # This will create an array detailing the possible labels that could be associated with each nuclei
     # (aka 0, 1, 2, 3) each of them will corresponds with healthy, staurosporin_dying, etc.
@@ -136,11 +156,13 @@ def sort_stimulants(dictionary, stimuli):
 
     return img_array, possible_labels
 
+
 def store_arrays(possible_labels):
     count_arr = []
     org_arr = []
 
-    # k_means_clustering(pi_k_means_array)
+    # k_means_clustering(pi_std_array, c_std_array)
+
     # Returns the count of each label as well as stores the imgs in org_array
     for label in range(len(possible_labels)):
         label_count = sum([num_label.count(label) for num_label in sample_label_array])
@@ -214,11 +236,11 @@ def store_arrays(possible_labels):
                 # Augment the data
                 temp_array = []
                 temp_array.append([file, labels])
-                # temp_array.append([np.array(tf.image.flip_left_right(file)), labels])
+                temp_array.append([np.array(tf.image.flip_left_right(file)), labels])
                 # # temp_array.append([np.array(tf.image.random_brightness(file, max_delta=0.5)), labels])
-                # temp_array.append([np.array(tf.image.rot90(file)), labels])
-                # temp_array.append([np.array(tf.image.random_flip_left_right(file)), labels])
-                # temp_array.append([np.array(tf.image.random_flip_up_down(file)), labels])
+                temp_array.append([np.array(tf.image.rot90(file)), labels])
+                temp_array.append([np.array(tf.image.random_flip_left_right(file)), labels])
+                temp_array.append([np.array(tf.image.random_flip_up_down(file)), labels])
                 for img in temp_array:
                     shuffle_array.append(img)
             # squeezed_file = np.squeeze(file)
@@ -258,7 +280,7 @@ def calculate_centroid(c, index, centroid_number, centroid_array, image_centroid
                 # Create ID for cell
                 image_centroid_dictionary['centroid {}'.format(centroid_number)] = [[cx, cy, c]]
             else:
-                # if it is another image in the time point, then append to a list of arrays to be sorted out later
+                # if it is another cell in the time point, then append to a list of arrays to be sorted out later
                 centroid_array.append([cx, cy, c])
     else:
         pass
@@ -278,33 +300,32 @@ def compare_centroids(cx, cy, possible_centroids):
     return img
 
 
-def kmeans_preprocessing(pi_img, w, h, pi_k_means_array):
-    pi_area = w * h
+def kmeans_preprocessing(img, img_array):
+    # Determine STD
+    arr = img.astype('float')
+    arr[arr == 0] = None
+    std_img = np.nanstd(arr)
 
-    index = 0
-    threshold_value = 850
-
-    for row in pi_img:
-        for pix_val in row:
-            if pix_val > threshold_value:
-                index += 1
-
-    pi_k_means_array.append([pi_area, index])
+    img_array.append(std_img)
 
 
-def k_means_clustering(pi_k_means_array):
+def k_means_clustering(pi_std_arr, c_std_arr):
+    arr = []
     x = []
     y = []
+
+    for i in range(len(pi_std_arr)):
+        arr.append([pi_std_arr[i], c_std_arr[i]])
 
     total_clusters = 2
 
     kmeans = MiniBatchKMeans(n_clusters=total_clusters)
 
-    kmeans.fit(pi_k_means_array)
+    kmeans.fit(arr)
 
     centroids = kmeans.cluster_centers_
 
-    for index in pi_k_means_array:
+    for index in arr:
         x.append(index[0])
         y.append(index[1])
 
@@ -314,14 +335,30 @@ def k_means_clustering(pi_k_means_array):
     df = DataFrame(pi_values, columns=['size', 'bright pixels'])
     plt.scatter(df['size'], df['bright pixels'], c=kmeans.labels_.astype(float), s=10, alpha=0.5)
     plt.scatter(centroids[:, 0], centroids[:, 1], marker="x", s=150, linewidths=5, zorder=10)
+    plt.xlim(0, 120)
+    # plt.ylim()
     plt.title("# of bright pixels per PI image in relation to image size (staurosporin)")
     plt.xlabel("Size of PI Image")
     plt.ylabel("# of Bright Pixels")
     plt.show()
 
 
-def process_image(dapi, pi, index, labels, centroid_array, image_centroid_dictionary, threshold_value, stimuli):
+def apply_mask(img, contour, x, y, w, h):
+    # Applying a mask to the image to isolate ROI
+    # Create Mask
+    zero_mask = np.zeros(img.shape).astype(img.dtype)
 
+    white = [1]
+    cv2.drawContours(zero_mask, [contour[-1]], 0, white, -1)
+
+    res_img = zero_mask * img
+
+    res_img = res_img[y:y + h, x:x + w]
+
+    return res_img
+
+
+def process_image(dapi, pi, index, labels, centroid_array, image_centroid_dictionary, threshold_value, stimuli):
     mean, std_dapi = cv2.meanStdDev(dapi)
     if std_dapi > 30:
         # plt.imshow(pi)
@@ -358,50 +395,64 @@ def process_image(dapi, pi, index, labels, centroid_array, image_centroid_dictio
                 # pushes the cell within the next frame to the end of the array
                 image_centroid_dictionary[key][-1] = next_cell
 
+                '''Current format after Timepoint 2
+                image dictionary = {ID: [[x1, y1, centroid], [x2, y2, centroid], ...} 
+                
+                What we want: 
+                image dictionary = {ID: [[x1, y1, segmented image, label]...}
+                
+                How to implement:
+                Instead of appending to image label array, append to the dictionary directly 
+                Maybe you can use dictionary.values() 
+                
+                dying = False 
+                for each key in dictionary: 
+                    for arr in key.values():
+                        if 0 in arr:
+                            dying = True 
+                            break
+                            
+                if dying == True:
+                    for arr in dictionary.value():
+                        arr[-1] = 0
+                At this point each of the labels should be changed to 0 if a dying cell exists in their timepoint
+                '''
+
         for nuclei_id in image_centroid_dictionary.keys():
             for nuclei in image_centroid_dictionary[nuclei_id]:
 
                 x, y, w, h = cv2.boundingRect(nuclei[-1])
 
-                # Applying a mask to the image to isolate ROI
-                # Create Mask
-                zero_mask_dapi = np.zeros(dapi.shape).astype(dapi.dtype)
-                zero_mask_pi = np.zeros(pi.shape).astype(pi.dtype)
-
-                white = [1]
-                cv2.drawContours(zero_mask_dapi, [nuclei[-1]], 0, white, -1)
-                cv2.drawContours(zero_mask_pi, [nuclei[-1]], 0, white, -1)
-
-                res_dapi = zero_mask_dapi * dapi
-                res_pi = zero_mask_pi * pi_smoothed
-
-                res_dapi = res_dapi[y:y + h, x:x + w]
-                res_pi = res_pi[y:y + h, x:x + w]
+                res_dapi = apply_mask(dapi, nuclei, x, y, w, h)
+                res_pi = apply_mask(pi, nuclei, x, y, w, h)
+                # res_c = apply_mask(c, nuclei, x, y, w, h)
 
                 area = w * h
-                pi_img = pi_smoothed[y:y + h, x:x + w]
-                dapi_cropped = dapi[y:y + h, x:x + w]
 
-                # Ensuring that there is a cell there in the DAPI image
+                # Converts pixel values of 0 to NaN to not influence std calculation
                 arr = res_dapi.astype('float')
                 arr[arr == 0] = None
                 std_dapi_img = np.nanstd(arr)
 
+                # Ensuring that there is a cell there in the DAPI image
                 if std_dapi_img > 100:
-                    std_array.append(std_dapi_img)
-                    # kmeans_preprocessing(zero_mask_pi, w, h, pi_k_means_array)
 
-                    squeezed_dapi = cv2.merge((dapi_cropped, dapi_cropped, dapi_cropped), -1)
+                    std_array.append(std_dapi_img)
+                    #
+                    # kmeans_preprocessing(res_pi, pi_std_array)
+                    # kmeans_preprocessing(res_c, c_std_array)
+
+                    squeezed_dapi = cv2.merge((res_dapi, res_dapi, res_dapi), -1)
                     dapi_img_resized = cv2.resize(squeezed_dapi, (86, 86), -1)
 
                     squeezed_pi = cv2.merge((res_pi, res_pi, res_pi), -1)
                     pi_img_resized = cv2.resize(squeezed_pi, (86, 86), -1)
 
-                    if stimuli != 'stim':
-                        augmented_images = [res_pi, pi_img, res_dapi, dapi_cropped]
+                    if stimuli != 'all':
+                        augmented_images = [res_pi, res_dapi, res_dapi]
                     else:
                         augmented_images = [dapi_img_resized]
-                    # augmented_images = [res_pi, pi_img, res_dapi, dapi_cropped]
+                    # augmented_images = [res_pi, pi_img, res_dapi, res_dapi]
 
                     # augmented_images = [[res_dapi]]
 
@@ -413,7 +464,7 @@ def process_image(dapi, pi, index, labels, centroid_array, image_centroid_dictio
                         # plt.imshow(res_pi)
                         # plt.imshow(pi_img)
                         # plt.imshow(res_dapi)
-                        # plt.imshow(dapi_cropped)
+                        # plt.imshow(res_dapi)
                         # plt.show()
 
                         sample_label_array.append([augmented_images, labels[0], area])
@@ -425,7 +476,7 @@ def process_image(dapi, pi, index, labels, centroid_array, image_centroid_dictio
                         # plt.imshow(res_pi)
                         # plt.imshow(pi_img)
                         # plt.imshow(res_dapi)
-                        # plt.imshow(dapi_cropped)
+                        # plt.imshow(res_dapi)
                         # plt.show()
                         sample_label_array.append([augmented_images, 1, area])
                         pi_array.append(res_pi)
@@ -437,7 +488,7 @@ def process_image(dapi, pi, index, labels, centroid_array, image_centroid_dictio
         pass
 
 
-def generate_training_data(directory, stimuli='all', dictionary={"hello": 1}):
+def generate_training_data(directory, stimuli='all', dictionary={}):
     pi_values, dapi_values, possible_labels = sort_files(directory, stimuli)
 
     for stim_index in range(len(dapi_values)):
@@ -449,15 +500,20 @@ def generate_training_data(directory, stimuli='all', dictionary={"hello": 1}):
         # for parent_img_index in range(len(dapi_values[stim_index])):
         # for parent_img_index in range(1):
 
+        thresh_hold = 0
+
         # assigning threshold values
-        if stim_index == 0:
-            thresh = dictionary['blank']
-        elif stim_index == 1:
-            thresh = dictionary['staurosporin']
-        elif stim_index == 2:
-            thresh = dictionary['h2o2']
-        else:
-            thresh = dictionary['nigericin']
+        try:
+            if stim_index == 0:
+                thresh_hold = dictionary['blank']
+            elif stim_index == 1:
+                thresh_hold = dictionary['staurosporin']
+            elif stim_index == 2:
+                thresh_hold = dictionary['h2o2']
+            elif stim_index == 3:
+                thresh_hold = dictionary['nigericin']
+        except:
+            thresh_hold = 38
 
         for parent_img_index in range(len(dapi_values[stim_index])):
             # Stores the centroids of each image (without an ID):
@@ -465,12 +521,13 @@ def generate_training_data(directory, stimuli='all', dictionary={"hello": 1}):
             centroid_array = []
             image_centroid_dictionary = {}
             index = 0
-            for img_frame_index in range(1):
+            for img_frame_index in range(2):
                 # for img_frame_index in range(len(dapi_values[stim_index][parent_img_index])):
                 dapi_img = cv2.imread(dapi_values[stim_index][parent_img_index][img_frame_index], -1)
                 pi_img = cv2.imread(pi_values[stim_index][parent_img_index][img_frame_index], -1)
+                # c_img = cv2.imread(c_values[stim_index][parent_img_index][img_frame_index], -1)
                 process_image(dapi_img, pi_img, index, labels, centroid_array,
-                              image_centroid_dictionary, threshold, stimuli)
+                              image_centroid_dictionary, thresh_hold, stimuli)
                 index += 1
 
     store_arrays(possible_labels)
@@ -490,5 +547,4 @@ def generate_training_data(directory, stimuli='all', dictionary={"hello": 1}):
     print(label_array)
 
 
-# generate_training_data(r"C:\Users\Kerr Lab\Desktop\CD-ML-myNewBranch\60_x_frames", stimuli='all')
-
+generate_training_data(r"C:\Users\Kerr Lab\Desktop\CD-ML-myNewBranch\60_x_frames", stimuli='blank')
