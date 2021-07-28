@@ -25,7 +25,7 @@ pi_std_array = []
 c_std_array = []
 
 # Stores the centroids of each image:
-parent_image_centroid_dictionary = {}
+parent_list = []
 
 
 # Make sure to implement if the cells resemble a circle later
@@ -145,7 +145,7 @@ def sort_stimulants(dictionary, stimuli):
     if stimuli == 'all':
         img_array = [blank, staurosporin, h2o2, nigericin]
     else:
-        img_array = [dic[stimuli][:10], staurosporin[:10]]
+        img_array = [dic[stimuli][:3], staurosporin[:3]]
 
     # This will create an array detailing the possible labels that could be associated with each nuclei
     # (aka 0, 1, 2, 3) each of them will corresponds with healthy, staurosporin_dying, etc.
@@ -162,6 +162,60 @@ def store_arrays(possible_labels):
     org_arr = []
 
     # k_means_clustering(pi_std_array, c_std_array)
+
+    '''Import Parent list
+    initial structure - [{key: [info],[info]..., key:[info]...}, {}...]
+
+    label_index = -2
+    dying = False 
+    for dictionary in parent_list:
+        for each key in dictionary: 
+            for arr in key.values():
+                if 0 in arr:
+                    dying = True 
+                    break
+
+            if dying == True:
+                for arr in key.value():
+                    arr[label_index] = 0
+
+    result: now all of the labels will be = 0 if a 0 label exists in their timepoint
+
+    '''
+
+    # If a cell is dying in any time point switch label to dying
+    label_index = -2
+    for dictionary in parent_list:
+        for key in dictionary:
+            for arr in reversed(dictionary[key]):
+                # Finds if the cell is ever dying and switches the label
+                for num in range(0, len(possible_labels), 2):
+                    for element in arr:
+                        if type(element) == int:
+                            if num == element:
+                                for arr in dictionary[key]:
+                                    arr[label_index] = num
+
+    '''At this point if the cell was ever dying in one of its time points the label == dying
+    
+    Next step is to extract the img, area, and label out of the dictionary
+    
+    img_idx = -3
+    label_idx = -2
+    area_idx = -1
+    for dictionary in parent_list:
+        for key in dictionary:
+            for arr in dictionary[key]
+                sample_label_array.extend([arr[img_idx], arr[label_idx], arr[area_idx]])'''
+
+    # Appends everything to an array to be parsed through later on
+    img_idx = -3
+    label_idx = -2
+    area_idx = -1
+    for dictionary in parent_list:
+        for key in dictionary:
+            for arr in dictionary[key]:
+                sample_label_array.extend([[arr[img_idx], arr[label_idx], arr[area_idx]]])
 
     # Returns the count of each label as well as stores the imgs in org_array
     for label in range(len(possible_labels)):
@@ -397,91 +451,92 @@ def process_image(dapi, pi, index, labels, centroid_array, image_centroid_dictio
 
                 '''Current format after Timepoint 2
                 image dictionary = {ID: [[x1, y1, centroid], [x2, y2, centroid], ...} 
-                
                 What we want: 
-                image dictionary = {ID: [[x1, y1, segmented image, label]...}
-                
+                image dictionary = {ID: [[x1, y1, centroid, segmented image, label, area]...}
                 How to implement:
                 Instead of appending to image label array, append to the dictionary directly 
                 Maybe you can use dictionary.values() 
-                
                 dying = False 
                 for each key in dictionary: 
                     for arr in key.values():
                         if 0 in arr:
                             dying = True 
                             break
-                            
                 if dying == True:
                     for arr in dictionary.value():
                         arr[-1] = 0
                 At this point each of the labels should be changed to 0 if a dying cell exists in their timepoint
                 '''
 
-        for nuclei_id in image_centroid_dictionary.keys():
-            for nuclei in image_centroid_dictionary[nuclei_id]:
+        for nuclei_id in list(image_centroid_dictionary.keys()):
+            nuclei = image_centroid_dictionary[nuclei_id][-1]
+            x, y, w, h = cv2.boundingRect(nuclei[-1])
 
-                x, y, w, h = cv2.boundingRect(nuclei[-1])
+            res_dapi = apply_mask(dapi, nuclei, x, y, w, h)
+            res_pi = apply_mask(pi, nuclei, x, y, w, h)
+            # res_c = apply_mask(c, nuclei, x, y, w, h)
 
-                res_dapi = apply_mask(dapi, nuclei, x, y, w, h)
-                res_pi = apply_mask(pi, nuclei, x, y, w, h)
-                # res_c = apply_mask(c, nuclei, x, y, w, h)
+            area = w * h
 
-                area = w * h
+            # Converts pixel values of 0 to NaN to not influence std calculation
+            arr = res_dapi.astype('float')
+            arr[arr == 0] = None
+            std_dapi_img = np.nanstd(arr)
 
-                # Converts pixel values of 0 to NaN to not influence std calculation
-                arr = res_dapi.astype('float')
-                arr[arr == 0] = None
-                std_dapi_img = np.nanstd(arr)
+            # Ensuring that there is a cell there in the DAPI image
+            if std_dapi_img > 100:
 
-                # Ensuring that there is a cell there in the DAPI image
-                if std_dapi_img > 100:
+                # std_array.append(std_dapi_img)
+                #
+                # kmeans_preprocessing(res_pi, pi_std_array)
+                # kmeans_preprocessing(res_c, c_std_array)
 
-                    std_array.append(std_dapi_img)
-                    #
-                    # kmeans_preprocessing(res_pi, pi_std_array)
-                    # kmeans_preprocessing(res_c, c_std_array)
+                squeezed_dapi = cv2.merge((res_dapi, res_dapi, res_dapi), -1)
+                dapi_img_resized = cv2.resize(squeezed_dapi, (86, 86), -1)
 
-                    squeezed_dapi = cv2.merge((res_dapi, res_dapi, res_dapi), -1)
-                    dapi_img_resized = cv2.resize(squeezed_dapi, (86, 86), -1)
+                # squeezed_pi = cv2.merge((res_pi, res_pi, res_pi), -1)
+                # pi_img_resized = cv2.resize(squeezed_pi, (86, 86), -1)
 
-                    squeezed_pi = cv2.merge((res_pi, res_pi, res_pi), -1)
-                    pi_img_resized = cv2.resize(squeezed_pi, (86, 86), -1)
+                if stimuli != 'all':
+                    augmented_images = [dapi_img_resized]
+                else:
+                    augmented_images = [dapi_img_resized]
+                # augmented_images = [res_pi, pi_img, res_dapi, res_dapi]
 
-                    if stimuli != 'all':
-                        augmented_images = [res_pi, res_dapi, res_dapi]
-                    else:
-                        augmented_images = [dapi_img_resized]
-                    # augmented_images = [res_pi, pi_img, res_dapi, res_dapi]
+                # augmented_images = [[res_dapi]]
 
-                    # augmented_images = [[res_dapi]]
+                arr_pi = res_pi.astype('float')
+                arr_pi[arr_pi == 0] = None
+                std_pi_img = np.nanstd(arr_pi)
 
-                    arr_pi = res_pi.astype('float')
-                    arr_pi[arr_pi == 0] = None
-                    std_pi_img = np.nanstd(arr_pi)
+                if std_pi_img > threshold_value:
+                    # plt.imshow(res_pi)
+                    # plt.imshow(pi_img)
+                    # plt.imshow(res_dapi)
+                    # plt.imshow(res_dapi)
+                    # plt.show()
 
-                    if std_pi_img > threshold_value:
-                        # plt.imshow(res_pi)
-                        # plt.imshow(pi_img)
-                        # plt.imshow(res_dapi)
-                        # plt.imshow(res_dapi)
-                        # plt.show()
-
-                        sample_label_array.append([augmented_images, labels[0], area])
-                        pi_array.append(res_pi)
-
-                        # store_arrays()
-
-                    else:
-                        # plt.imshow(res_pi)
-                        # plt.imshow(pi_img)
-                        # plt.imshow(res_dapi)
-                        # plt.imshow(res_dapi)
-                        # plt.show()
-                        sample_label_array.append([augmented_images, 1, area])
-                        pi_array.append(res_pi)
+                    # Appends img, label, and area to the last value in the dictionary
+                    image_centroid_dictionary[nuclei_id][-1].extend([augmented_images, labels[0], area])
+                    # sample_label_array.extend([[augmented_images, labels[0], area]])
+                    pi_array.append(res_pi)
 
                     # store_arrays()
+
+                else:
+                    # plt.imshow(res_pi)
+                    # plt.imshow(pi_img)
+                    # plt.imshow(res_dapi)
+                    # plt.imshow(res_dapi)
+                    # plt.show()
+                    image_centroid_dictionary[nuclei_id][-1].extend([augmented_images, 1, area])
+                    # sample_label_array.extend([augmented_images, 1, area])
+                    pi_array.append(res_pi)
+            else:
+                # Toss the centroids out of the dictionary if they are not a cell
+                image_centroid_dictionary.pop(nuclei_id)
+
+                # store_arrays()
 
 
     else:
@@ -500,7 +555,7 @@ def generate_training_data(directory, stimuli='all', dictionary={}):
         # for parent_img_index in range(len(dapi_values[stim_index])):
         # for parent_img_index in range(1):
 
-        thresh_hold = 0
+        # thresh_hold = 0
 
         # assigning threshold values
         try:
@@ -515,9 +570,12 @@ def generate_training_data(directory, stimuli='all', dictionary={}):
         except:
             thresh_hold = 38
 
+        # stim_index = 1
+
         for parent_img_index in range(len(dapi_values[stim_index])):
             # Stores the centroids of each image (without an ID):
             pi_frame_array = []
+            # parent_img_index = 0
             centroid_array = []
             image_centroid_dictionary = {}
             index = 0
@@ -529,6 +587,8 @@ def generate_training_data(directory, stimuli='all', dictionary={}):
                 process_image(dapi_img, pi_img, index, labels, centroid_array,
                               image_centroid_dictionary, thresh_hold, stimuli)
                 index += 1
+
+            parent_list.append(image_centroid_dictionary)
 
     store_arrays(possible_labels)
 
