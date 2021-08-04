@@ -1,6 +1,7 @@
 import random
 import os
 import cv2
+import time
 import pickle
 import tensorflow as tf
 import math
@@ -26,6 +27,8 @@ c_std_array = []
 
 # Stores the centroids of each image:
 parent_list = []
+
+zero_mask = np.zeros((2160, 2160)).astype(np.uint16)
 
 
 # Make sure to implement if the cells resemble a circle later
@@ -141,11 +144,11 @@ def sort_stimulants(dictionary, stimuli):
                 nigericin.append(imgs)
 
     dic = {'blank': blank, 'staurosporin': staurosporin, 'h2o2': h2o2, 'nigericin': nigericin}
-
+    slice = 20
     if stimuli == 'all':
         img_array = [blank, staurosporin, h2o2, nigericin]
     else:
-        img_array = [dic[stimuli][:3], staurosporin[:3]]
+        img_array = [dic[stimuli][:slice], staurosporin[:slice], h2o2[:slice], nigericin[:slice] ]
 
     # This will create an array detailing the possible labels that could be associated with each nuclei
     # (aka 0, 1, 2, 3) each of them will corresponds with healthy, staurosporin_dying, etc.
@@ -164,27 +167,24 @@ def store_arrays(possible_labels):
     # k_means_clustering(pi_std_array, c_std_array)
 
     '''Import Parent list
-    initial structure - [{key: [info],[info]..., key:[info]...}, {}...]
-
-    label_index = -2
-    dying = False 
-    for dictionary in parent_list:
-        for each key in dictionary: 
-            for arr in key.values():
-                if 0 in arr:
-                    dying = True 
-                    break
-
-            if dying == True:
-                for arr in key.value():
-                    arr[label_index] = 0
-
-    result: now all of the labels will be = 0 if a 0 label exists in their timepoint
-
-    '''
+   initial structure - [{key: [info],[info]..., key:[info]...}, {}...]
+   label_index = -2
+   dying = False
+   for dictionary in parent_list:
+       for each key in dictionary:
+           for arr in key.values():
+               if 0 in arr:
+                   dying = True
+                   break
+           if dying == True:
+               for arr in key.value():
+                   arr[label_index] = 0
+   result: now all of the labels will be = 0 if a 0 label exists in their timepoint
+   '''
 
     # If a cell is dying in any time point switch label to dying
     label_index = -2
+    sliced = 4
     for dictionary in parent_list:
         for key in dictionary:
             for arr in reversed(dictionary[key]):
@@ -192,21 +192,23 @@ def store_arrays(possible_labels):
                 for num in range(0, len(possible_labels), 2):
                     for element in arr:
                         if type(element) == int:
+                            # if the label is equal to a dying label
                             if num == element:
-                                for arr in dictionary[key]:
-                                    arr[label_index] = num
+                                for i in reversed(range(len(dictionary[key]))[sliced:]):
+                                    dictionary[key][i][label_index] = num
+    # maybe check if the cell switches from dying to healthy then back to dying later on
 
     '''At this point if the cell was ever dying in one of its time points the label == dying
-    
-    Next step is to extract the img, area, and label out of the dictionary
-    
-    img_idx = -3
-    label_idx = -2
-    area_idx = -1
-    for dictionary in parent_list:
-        for key in dictionary:
-            for arr in dictionary[key]
-                sample_label_array.extend([arr[img_idx], arr[label_idx], arr[area_idx]])'''
+
+   Next step is to extract the img, area, and label out of the dictionary
+
+   img_idx = -3
+   label_idx = -2
+   area_idx = -1
+   for dictionary in parent_list:
+       for key in dictionary:
+           for arr in dictionary[key]
+               sample_label_array.extend([arr[img_idx], arr[label_idx], arr[area_idx]])'''
 
     # Appends everything to an array to be parsed through later on
     img_idx = -3
@@ -400,21 +402,22 @@ def k_means_clustering(pi_std_arr, c_std_arr):
 def apply_mask(img, contour, x, y, w, h):
     # Applying a mask to the image to isolate ROI
     # Create Mask
-    zero_mask = np.zeros(img.shape).astype(img.dtype)
+    global zero_mask
+    zero_mask[:] = 0
 
     white = [1]
     cv2.drawContours(zero_mask, [contour[-1]], 0, white, -1)
 
-    res_img = zero_mask * img
+    zero_mask = zero_mask * img
 
-    res_img = res_img[y:y + h, x:x + w]
-
-    return res_img
+    return zero_mask[y:y + h, x:x + w]
 
 
 def process_image(dapi, pi, index, labels, centroid_array, image_centroid_dictionary, threshold_value, stimuli):
     mean, std_dapi = cv2.meanStdDev(dapi)
     if std_dapi > 30:
+        # start = time.perf_counter()
+        # print("Started first at {}".format(start))
         # plt.imshow(pi)
         # Converts the color in the image to grey scale
         img = cv2.cvtColor(dapi, cv2.COLOR_GRAY2BGR)
@@ -434,11 +437,18 @@ def process_image(dapi, pi, index, labels, centroid_array, image_centroid_dictio
         # Smoothens the PI img
         pi_smoothed = cv2.GaussianBlur(pi, (9, 9), 0)
 
+        # end = time.perf_counter()
+        # print("End at {}, took {} seconds".format(end, end - start))
+        # start = time.perf_counter()
+        # print("Started second at {}".format(start))        print("End at {}, took {} seconds".format(end, end - start))
+
         for a in contours:
             calculate_centroid(a, index, centroid_number, centroid_array, image_centroid_dictionary)
             centroid_number += 1
-
+        # end = time.perf_counter()
         if index >= 1:
+            # start = time.perf_counter()
+            # print("Started third at {}".format(start))
             # for each cell in an image
             for key in image_centroid_dictionary.keys():  # FIX
                 # appends the list of possible arrays to the dictionary
@@ -450,31 +460,35 @@ def process_image(dapi, pi, index, labels, centroid_array, image_centroid_dictio
                 image_centroid_dictionary[key][-1] = next_cell
 
                 '''Current format after Timepoint 2
-                image dictionary = {ID: [[x1, y1, centroid], [x2, y2, centroid], ...} 
-                What we want: 
-                image dictionary = {ID: [[x1, y1, centroid, segmented image, label, area]...}
-                How to implement:
-                Instead of appending to image label array, append to the dictionary directly 
-                Maybe you can use dictionary.values() 
-                dying = False 
-                for each key in dictionary: 
-                    for arr in key.values():
-                        if 0 in arr:
-                            dying = True 
-                            break
-                if dying == True:
-                    for arr in dictionary.value():
-                        arr[-1] = 0
-                At this point each of the labels should be changed to 0 if a dying cell exists in their timepoint
-                '''
+               image dictionary = {ID: [[x1, y1, centroid], [x2, y2, centroid], ...}
+               What we want:
+               image dictionary = {ID: [[x1, y1, centroid, segmented image, label, area]...}
+               How to implement:
+               Instead of appending to image label array, append to the dictionary directly
+               Maybe you can use dictionary.values()
+               dying = False
+               for each key in dictionary:
+                   for arr in key.values():
+                       if 0 in arr:
+                           dying = True
+                           break
+               if dying == True:
+                   for arr in dictionary.value():
+                       arr[-1] = 0
+               At this point each of the labels should be changed to 0 if a dying cell exists in their timepoint
+               '''
 
         for nuclei_id in list(image_centroid_dictionary.keys()):
             nuclei = image_centroid_dictionary[nuclei_id][-1]
             x, y, w, h = cv2.boundingRect(nuclei[-1])
 
-            res_dapi = apply_mask(dapi, nuclei, x, y, w, h)
-            res_pi = apply_mask(pi, nuclei, x, y, w, h)
+            # start2 = time.perf_counter()
+            # print("Started fifth at {}".format(start2))
+            res_dapi = apply_mask(dapi, nuclei, x, y, w, h).astype(np.uint16)
+            res_pi = apply_mask(pi, nuclei, x, y, w, h).astype(np.uint16)
             # res_c = apply_mask(c, nuclei, x, y, w, h)
+            # end = time.perf_counter()
+            # print("End at {}, took {} seconds".format(end, end - start2))
 
             area = w * h
 
@@ -537,6 +551,8 @@ def process_image(dapi, pi, index, labels, centroid_array, image_centroid_dictio
                 image_centroid_dictionary.pop(nuclei_id)
 
                 # store_arrays()
+        # end = time.perf_counter()
+        # print("End at {}, took {} seconds".format(end, end - start))
 
 
     else:
@@ -555,7 +571,7 @@ def generate_training_data(directory, stimuli='all', dictionary={}):
         # for parent_img_index in range(len(dapi_values[stim_index])):
         # for parent_img_index in range(1):
 
-        # thresh_hold = 0
+        thresh_hold = 0
 
         # assigning threshold values
         try:
@@ -579,7 +595,7 @@ def generate_training_data(directory, stimuli='all', dictionary={}):
             centroid_array = []
             image_centroid_dictionary = {}
             index = 0
-            for img_frame_index in range(2):
+            for img_frame_index in range(8):
                 # for img_frame_index in range(len(dapi_values[stim_index][parent_img_index])):
                 dapi_img = cv2.imread(dapi_values[stim_index][parent_img_index][img_frame_index], -1)
                 pi_img = cv2.imread(pi_values[stim_index][parent_img_index][img_frame_index], -1)
