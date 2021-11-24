@@ -21,14 +21,6 @@ directory = r'C:\Users\Steven\Documents\GitHub\CD-ML\Graphs'
 index = 0
 
 def run(index):
-    # img_path = r'C:\Users\Steven\Documents\GitHub\CD-ML\healthycell'
-    # for img in os.listdir(img_path):
-    #     index += 1
-    #     with open(os.path.join(img_path, img), 'r') as f:
-    #         data_array, images = create_array(f)
-    #     predict_image(data_array)
-    #     export_files(model, index, images)
-        # print_images(images)
     open_array = open('sample_3.array', 'rb')
     loaded_array = pickle.load(open_array)
     predict_image(loaded_array)
@@ -44,33 +36,6 @@ def load_images():
     loaded_t_healthy = pickle.load(true_healthy_images)
     loaded_t_dying = pickle.load(true_dying_images)
 
-    # for i in range(len(loaded_f_healthy)):
-    #     imageio.imwrite(r'C:\Users\Steven\Documents\GitHub\CD-ML\60x_confusion_matrix_img\f_healthy{}.png'.format(i), loaded_f_healthy[i])
-    # for i in range(len(loaded_t_healthy)):
-    #     imageio.imwrite(r'C:\Users\Steven\Documents\GitHub\CD-ML\60x_confusion_matrix_img\t_healthy{}.png'.format(i), loaded_t_healthy[i])
-    # for i in range(len(loaded_f_dying)):
-    #     imageio.imwrite(r'C:\Users\Steven\Documents\GitHub\CD-ML\60x_confusion_matrix_img\f_dying{}.png'.format(i), loaded_f_dying[i])
-    # for i in range(len(loaded_t_dying)):
-    #     imageio.imwrite(r'C:\Users\Steven\Documents\GitHub\CD-ML\60x_confusion_matrix_img\t_dying{}.png'.format(i), loaded_t_dying[i])
-
-    # for i in loaded_f_healthy:
-    #     healthy_scaled = cv2.normalize(i, dst=None, alpha=0, beta=65535, norm_type=cv2.NORM_MINMAX)
-    #     cv2.namedWindow('myImage', cv2.WINDOW_NORMAL)
-    #     cv2.imshow('myImage', healthy_scaled)
-    #     cv2.waitKey(0)
-    #     cv2.destroyAllWindows()
-    # for i in loaded_t_dying:
-    #     dying_scaled = cv2.normalize(i, dst=None, alpha=0, beta=65535, norm_type=cv2.NORM_MINMAX)
-    #     cv2.namedWindow('myImage', cv2.WINDOW_NORMAL)
-    #     cv2.imshow('myImage', dying_scaled)
-    #     cv2.waitKey(0)
-    #     cv2.destroyAllWindows()
-    # for i in loaded_t_healthy:
-    #     healthy_scaled = cv2.normalize(i, dst=None, alpha=0, beta=65535, norm_type=cv2.NORM_MINMAX)
-    #     cv2.namedWindow('myImage', cv2.WINDOW_NORMAL)
-    #     cv2.imshow('myImage', healthy_scaled)
-    #     cv2.waitKey(0)
-    #     cv2.destroyAllWindows()
     for i in loaded_f_dying:
         healthy_scaled = cv2.normalize(i, dst=None, alpha=0, beta=65535, norm_type=cv2.NORM_MINMAX)
         cv2.namedWindow('myImage', cv2.WINDOW_NORMAL)
@@ -126,11 +91,7 @@ def run_file():
 
                 if index % 4 == 0:
                     false_healthy_array.append(squeezed_healthy)
-                # cv2.namedWindow('myImage', cv2.WINDOW_NORMAL)
-                # cv2.imshow('myImage', healthy_scaled)
-                # cv2.waitKey(0)
-                # cv2.destroyAllWindows()
-                # plt.show()
+
                 false_healthy += 1
 
             else:
@@ -142,10 +103,6 @@ def run_file():
                     false_dying_array.append(squeezed_dying)
 
 
-                # cv2.namedWindow('myImage', cv2.WINDOW_NORMAL)
-                # cv2.imshow('myImage', dying_scaled)
-                # cv2.waitKey(0)
-                # cv2.destroyAllWindows()
                 false_dying += 1
 
     print("true dying: " + str(true_dying))
