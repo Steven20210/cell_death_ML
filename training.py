@@ -69,24 +69,7 @@ def import_data():
 
 
 def run_network(array_X, array_Y):
-    # classifier = Sequential()
-    # classifier.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=array_X.shape[1:]))
-    # classifier.add(MaxPooling2D(pool_size=(2, 2)))
-    #
-    # classifier.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=array_X.shape[1:]))
-    # classifier.add(MaxPooling2D(pool_size=(2, 2)))
-    #
-    # classifier.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=array_X.shape[1:]))
-    # classifier.add(MaxPooling2D(pool_size=(2, 2)))
-    #
-    # classifier.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=array_X.shape[1:]))
-    # classifier.add(MaxPooling2D(pool_size=(2, 2)))
-    #
-    # classifier.add(Flatten())
-    #
-    # classifier.add(Dense(units=512, activation='relu'))
-    # classifier.add(Dense(units=8, activation='softmax'))
-    # # #
+  
     opt = keras.optimizers.Adam(learning_rate=0.0001)
     model = Sequential()
     # model.add(BatchNormalization())
@@ -95,25 +78,7 @@ def run_network(array_X, array_Y):
     model.add(Conv2D(filters=64, kernel_size=(3, 3), padding="same", activation="relu", kernel_regularizer=l2(0.0005),
                      bias_regularizer=l2(0.0005)))
     model.add(MaxPool2D(pool_size=(2, 2), strides=(2, 2)))
-    # model.add(BatchNormalization())
-    # model.add(Conv2D(filters=128, kernel_size=(3, 3), padding="same", activation="relu", kernel_regularizer=l2(0.0005)
-    #                  , bias_regularizer=l2(0.0005)))
-    # model.add(Conv2D(filters=128, kernel_size=(3, 3), padding="same", activation="relu", kernel_regularizer=l2(0.0005), bias_regularizer=l2(0.0005)))
-    # model.add(MaxPool2D(pool_size=(2, 2), strides=(2, 2)))
-
-    # model.add(BatchNormalization())
-    # model.add(Conv2D(filters=256, kernel_size=(3, 3), padding="same", activation="relu"))
-    # model.add(Conv2D(filters=256, kernel_size=(3, 3), padding="same", activation="relu"))
-    # model.add(Conv2D(filters=256, kernel_size=(3, 3), padding="same", activation="relu"))
-    # model.add(MaxPool2D(pool_size=(2, 2), strides=(2, 2)))
-    # model.add(Conv2D(filters=512, kernel_size=(3, 3), padding="same", activation="relu"))
-    # model.add(Conv2D(filters=512, kernel_size=(3, 3), padding="same", activation="relu"))
-    # model.add(Conv2D(filters=512, kernel_size=(3, 3), padding="same", activation="relu"))
-    # model.add(MaxPool2D(pool_size=(2, 2), strides=(2, 2)))
-    # model.add(Conv2D(filters=512, kernel_size=(3, 3), padding="same", activation="relu", kernel_regularizer=l2(0.0005), bias_regularizer=l2(0.0005)))
-    # model.add(Conv2D(filters=512, kernel_size=(3, 3), padding="same", activation="relu", kernel_regularizer=l2(0.0005), bias_regularizer=l2(0.0005)))
-    # model.add(Conv2D(filters=512, kernel_size=(3, 3), padding="same", activation="relu", kernel_regularizer=l2(0.0005), bias_regularizer=l2(0.0005)))
-    # model.add(MaxPool2D(pool_size=(2, 2), strides=(2, 2)))
+    
 
     model.add(Flatten())
     # model.add(Dense(units=4096, activation="relu"))
@@ -121,35 +86,7 @@ def run_network(array_X, array_Y):
     model.add(Dense(units=8, activation="softmax"))
     # # #
     mcp_save = ModelCheckpoint('cell_cnn_60x', save_best_only=True, monitor='val_acc', mode='min')
-    #
-    # classifier.compile(loss='categorical_crossentropy',
-    #                    optimizer=opt,
-    #                    metrics=['acc'])
-    #
-    # classifier_history = classifier.fit(array_X, array_Y, batch_size=32, epochs=20, validation_split=0.3, callbacks=[mcp_save])
-    # print(classifier)
-    # print(classifier.summary())
-    # classifier.save('cell_cnn_60xsample.h5')
 
-    # for i in range(5):
-    #     time.sleep(30)
-    #
-    #     del classifier
-    #
-    #     classifier = load_model('cell_cnn_60xsample.h5')
-    #     classified = classifier.fit(array_X, array_Y, batch_size=32, epochs=3, validation_split=0.3)
-    #     classifier.save('cell_cnn_60xsample.h5')
-    #     if i == 4:
-    #         time.sleep(30)
-    #         classifier.save('cell_cnn_60xsample.h5')
-    #
-    #         del classifier
-    #
-    #         classifier = load_model('cell_cnn_60xsample.h5')
-    #         classified = classifier.fit(array_X, array_Y, batch_size=32, epochs=3, validation_split=0.3)
-    #         return classifier, classified
-
-    # return classifier_history
 
     model.compile(loss='categorical_crossentropy',
                   optimizer=opt,
@@ -171,23 +108,6 @@ def run_network(array_X, array_Y):
     res = models.predict(x)
 
     tf.math.confusion_matrix(y, res)
-
-
-    # # for index in range(5):
-    # #     time.sleep(450)
-    # #     del model
-    # #
-    # #     model = load_model('cell_cnn_60xsample.h5')
-    # #     classified = model.fit(array_X, array_Y, batch_size=32, epochs=3, validation_split=0.3, callbacks=[mcp_save])
-    # #     model.save('cell_cnn60xsample.h5')
-    # #     if index == 4:
-    # #         time.sleep(450)
-    # #         del model
-    # #
-    # #         model = load_model('cell_cnn_60xsample.h5')
-    # #         classified = model.fit(array_X, array_Y, batch_size=32, epochs=3, validation_split=0.3,
-    # #                                callbacks=[mcp_save])
-    # #         return model, classified
 
 
     return classified
