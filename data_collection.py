@@ -89,13 +89,6 @@ def sort_files(parent_folder, stimuli):
             del dapi_dictionary[key]
             # del c_dictionary[key]
 
-    # for key in c_dictionary:
-    #     if key in pi_dictionary and dapi_dictionary:
-    #         pass
-    #     else:
-    #         del dapi_dictionary[key]
-    #         del pi_dictionary[key]
-
     sorted_dapi = collections.OrderedDict(sorted(dapi_dictionary.items()))
     sorted_pi = collections.OrderedDict(sorted(pi_dictionary.items()))
     # sorted_c = collections.OrderedDict(sorted(c_dictionary.items()))
@@ -164,24 +157,6 @@ def store_arrays(possible_labels):
     count_arr = []
     org_arr = []
 
-    # k_means_clustering(pi_std_array, c_std_array)
-
-    '''Import Parent list
-   initial structure - [{key: [info],[info]..., key:[info]...}, {}...]
-   label_index = -2
-   dying = False
-   for dictionary in parent_list:
-       for each key in dictionary:
-           for arr in key.values():
-               if 0 in arr:
-                   dying = True
-                   break
-           if dying == True:
-               for arr in key.value():
-                   arr[label_index] = 0
-   result: now all of the labels will be = 0 if a 0 label exists in their timepoint
-   '''
-
     # If a cell is dying in any time point switch label to dying
     label_index = -2
     sliced = 4
@@ -201,14 +176,6 @@ def store_arrays(possible_labels):
     '''At this point if the cell was ever dying in one of its time points the label == dying
 
    Next step is to extract the img, area, and label out of the dictionary
-
-   img_idx = -3
-   label_idx = -2
-   area_idx = -1
-   for dictionary in parent_list:
-       for key in dictionary:
-           for arr in dictionary[key]
-               sample_label_array.extend([arr[img_idx], arr[label_idx], arr[area_idx]])'''
 
     # Appends everything to an array to be parsed through later on
     img_idx = -3
